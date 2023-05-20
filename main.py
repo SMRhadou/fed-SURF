@@ -35,19 +35,19 @@ featureSizePerClass = CNN.module.linear.in_features
 
 # Create Meta Dataset
 if args.createMetaDataset:
-    metadataset = createMetaDataset(CNN, dataset, args)
+    metadataset, classesDist = createMetaDataset(CNN, dataset, args)
     if not os.path.exists("data/meta"):
         os.makedirs("data/meta")
-    with open(f"./data/meta/Experiment1.pkl", 'wb') as ObjFile:
-        pickle.dump(metadataset, ObjFile)
+    with open(f"./data/meta/Experiment1_{args.nClasses}.pkl", 'wb') as ObjFile:
+        pickle.dump((metadataset, classesDist), ObjFile)
 else:
-    with open(f"./data/meta/Experiment1.pkl", 'rb') as ObjFile:
-        metadataset = pickle.load(ObjFile)
+    with open(f"./data/meta/Experiment1_{args.nClasses}.pkl", 'rb') as ObjFile:
+        metadataset, classesDist = pickle.load(ObjFile)
 logging.debug("MetaDataset Created ...")
 
 
 # Create Graphs
-Graph, _ = utils.Generate_KdegreeGraphs(args.nDatasets, args.nAgents, 3)
+Graph, _ = utils.Generate_KdegreeGraphs(args.nDatasets, args.nAgents, args.nodeDegree)
 logging.debug("Graphs Created ...")
 
 # Initialize/Load the unrolled model
@@ -70,20 +70,20 @@ logging.debug("Evaluation ...")
 # Create Test meta dataset
 test_dataset = loadDataset(False)
 if args.createMetaDataset:
-    test_metadataset = createMetaDataset(CNN, test_dataset, args)
+    test_metadataset, _ = createMetaDataset(CNN, test_dataset, args, classesDist=classesDist)
     if not os.path.exists("data/meta"):
         os.makedirs("data/meta")
-    with open(f"./data/meta/Experiment1-test.pkl", 'wb') as ObjFile:
-        pickle.dump(test_metadataset, ObjFile)
+    with open(f"./data/meta/Experiment1-test_{args.nClasses}.pkl", 'wb') as ObjFile:
+        pickle.dump((test_metadataset, classesDist), ObjFile)
 else:
-    with open(f"./data/meta/Experiment1-test.pkl", 'rb') as ObjFile:
-        test_metadataset = pickle.load(ObjFile)
+    with open(f"./data/meta/Experiment1-test_{args.nClasses}.pkl", 'rb') as ObjFile:
+        test_metadataset, classesDist = pickle.load(ObjFile)
 
 # Generate Graphs
-GraphTest, _ = utils.Generate_KdegreeGraphs(args.nDatasets, args.nAgents, 3)
+GraphTest, _ = utils.Generate_KdegreeGraphs(args.nDatasets, args.nAgents, args.nodeDegree)
 
 # Load best model
-modelPath = f"./savedModels/{args.Trial}/"
+modelPath = f"./savedModels/{args.Trial}_{args.nLayers}_{args.nClasses}/"
 model = UnrolledDGD(args.nLayers, args.K, (featureSizePerClass+args.nClasses)*args.batchSize, (featureSizePerClass+1)*args.nClasses, args.batchSize,
                         repeatLayers=args.repeatLayers, coreLayers=args.coreLayers)
 logging.debug("Evaluation ...")

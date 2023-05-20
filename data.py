@@ -15,26 +15,27 @@ def loadDataset(train):
         root='./data', train=train, download=True, transform=transforms.ToTensor())
     return trainset
 
-def selectClasses(dataset, args, imbalance=False):
+def classPermutation(classes, nClasses, nPerm):
+    P = np.zeros((nPerm, nClasses), dtype=int)
+    for i in range(nPerm):
+        P[i] = np.random.choice(len(classes), nClasses, replace=False)
+    return P
+
+def buildsubDataset(dataset, args, classes):
     nClasses = args.nClasses
     subDatasetSize = args.subDatasetSize
     subTrainSize = args.nTrainPerAgent*args.nAgents
     subValidSize = subDatasetSize - subTrainSize
-    if imbalance:
-        idx = np.random.permutation(nClasses)
-        nValidClass = (subValidSize * np.array([0.4, 0.3, 0.3]))[idx].astype(int)      # number of samples per class
-        nTrainClass = (subTrainSize * np.array([0.4, 0.3, 0.3]))[idx].astype(int)   # number of training samples per class
-    else:
-        nValidClass = int(subValidSize/nClasses) * np.ones((nClasses,), dtype=int)      # number of samples per class
-        nTrainClass = int(subTrainSize/nClasses) * np.ones((nClasses,), dtype=int)   # number of training samples per class
+    nValidClass = int(subValidSize/nClasses) * np.ones((nClasses,), dtype=int)      # number of samples per class
+    nTrainClass = int(subTrainSize/nClasses) * np.ones((nClasses,), dtype=int)   # number of training samples per class
     data_train = torch.empty((subTrainSize, dataset.data.shape[1], dataset.data.shape[2], dataset.data.shape[3]))
     data_valid = torch.empty((subValidSize, dataset.data.shape[1], dataset.data.shape[2], dataset.data.shape[3]))
     targets_train = torch.empty((subTrainSize,nClasses))
     targets_valid = torch.empty((subValidSize, nClasses))
-    classes = np.random.choice(len(dataset.classes), nClasses, replace=False)  # select classes randomly without replacement
+    # classes = np.random.choice(len(dataset.classes), nClasses, replace=False)  # select classes randomly without replacement
     for i in range(len(classes)):
         idx = np.where(dataset.targets == classes[i])[0]
-        one_hot = F.one_hot(torch.arange(0, 3) % 3)
+        one_hot = F.one_hot(torch.arange(0, nClasses) % nClasses)
         data, targets = torch.tensor(dataset.data)[idx], one_hot[i].repeat(len(idx), 1)#i*torch.ones_like(torch.tensor(dataset.targets)[idx])
         nTrain = 0.8 * len(data)
         idx = np.random.randint(0, nTrain, nTrainClass[i])
@@ -52,23 +53,26 @@ def selectClasses(dataset, args, imbalance=False):
     shuffleidx = torch.randperm(subDatasetSize)       
     return data[shuffleidx], targets[shuffleidx]
 
-def subDataset(dataset, args, outDist=False, imbalance=False):
+def subDataset(dataset, args, classes, outDist=False):
     if outDist:
         transform = outDistTransform()
     else:
         transform = randTransform()
-    data, targets = selectClasses(dataset, args, imbalance)
+    data, targets = buildsubDataset(dataset, args, classes)
     dataTensor = torch.empty((data.shape[0], data.shape[3], data.shape[1], data.shape[2]))
     for i in range(dataTensor.shape[0]):
         dataTensor[i] = transform(data[i].astype(np.uint8))          # subDatasetSize x image size (3d)
     return dataTensor.float(), targets, transform
 
-def createMetaDataset(model, dataset, args, outDist=False, imbalance=False):
+def createMetaDataset(model, dataset, args, classesDist=None, outDist=False):
     nTrainPerAgent = args.nTrainPerAgent
     metadataset = {}
     batchSize = 100
+    if classesDist is None:
+        classesDist = classPermutation(dataset.classes, args.nClasses, 100)
     for i in range(args.nDatasets):
-        images, targets, transform = subDataset(dataset, args, outDist, imbalance)                    # nAgents*nExamples (=subDatasetSize) x image size (3d) (Ex: 1200x3x32x32)
+        idx = np.random.randint(0, classesDist.shape[0], 1)[0]
+        images, targets, transform = subDataset(dataset, args, classesDist[idx], outDist)                    # nAgents*nExamples (=subDatasetSize) x image size (3d) (Ex: 1200x3x32x32)
         features = torch.empty((args.subDatasetSize, model.module.linear.in_features))                                                      # nAgents*nExamples x nFeatures (Ex: 1200x2048)
         for ibatch in range(images.shape[0]//batchSize):
             features[ibatch*batchSize:(ibatch+1)*batchSize] = model(images[ibatch*batchSize:(ibatch+1)*batchSize].to('cuda:0')) 
@@ -76,7 +80,7 @@ def createMetaDataset(model, dataset, args, outDist=False, imbalance=False):
         metadataset[i] = ((distributedFeatures[:,:nTrainPerAgent], distributedTargets[:,:nTrainPerAgent]), 
                             (distributedFeatures[:,nTrainPerAgent:], distributedTargets[:,nTrainPerAgent:]), transform)   # (train_dataset, test_dataset, transform)
     torch.cuda.empty_cache()
-    return metadataset
+    return metadataset, classesDist
 
 def spreadDataAmongAgents(dataset, targets, nAgents):
     return torch.reshape(dataset, (nAgents, -1, dataset.shape[1])), torch.reshape(targets, (nAgents, -1, targets.shape[1])) # nAgents x nExamples(training+validation) x nFeatures 

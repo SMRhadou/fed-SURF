@@ -1,10 +1,12 @@
 import numpy as np
 import logging 
 import os
+from tqdm import tqdm
 import seaborn as sns
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
+
 
 
 from evaluation import *
@@ -52,7 +54,7 @@ def metrics(model, metadataset, Graph, objective_function, criterion, evaluate=e
     obj = []
     model.eval()
     crossLoss = torch.zeros(len(metadataset), len(metadataset))
-    for ibatch in range(len(metadataset)):
+    for ibatch in tqdm(range(len(metadataset))):
         loss, acc, outs = evaluate(model, metadataset[ibatch], objective_function, criterion,  eps=0.05, nBOagents=nBOagents, SysID=Graph[ibatch], device=device, ibatch=ibatch)
         testloss[ibatch] = loss
         testAccuracy[ibatch] = acc

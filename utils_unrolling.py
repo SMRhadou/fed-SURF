@@ -10,21 +10,22 @@ import torch.backends.cudnn as cudnn
 
 def parser(FLAGS):
     FLAGS = argparse.ArgumentParser(description='LISTA')
-    FLAGS.add_argument('--Trial', type=str, default='Experiment1', help='Trial')
+    FLAGS.add_argument('--Trial', type=str, default='CIFAR10', help='Trial')
     # Model Parameters
     FLAGS.add_argument('--nLayers', type=int, default=10, help='nLayers')
     FLAGS.add_argument('--coreLayers', type=int, default=5, help='Core layers to be repeated')
     FLAGS.add_argument('--K', type=int, default=3, help='FilterTaps')
     # Learning Parameters
-    FLAGS.add_argument('--nEpochs', type=int, default=30, help='nEpochs')
+    FLAGS.add_argument('--nEpochs', type=int, default=500, help='nEpochs')
     FLAGS.add_argument('--lr', type=float, default=1e-2, help='lr')
     FLAGS.add_argument('--lr_dual', type=float, default=1e-3, help='lr_dual')
     FLAGS.add_argument('--eps', type=float, default=0.05, help='epsilon')
     # Data Parameters
     FLAGS.add_argument('--nDatasets', type=int, default=300, help='Size of Meta Dataset')
     FLAGS.add_argument('--nAgents', type=int, default=100, help='nAgents')
-    FLAGS.add_argument('--subDatasetSize', type=int, default=5000, help='Size of the subdatasets')
-    FLAGS.add_argument('--nTrainPerAgent', type=int, default=40, help='number of examples per agent')
+    FLAGS.add_argument('--nodeDegree', type=int, default=3, help='Node degree')
+    FLAGS.add_argument('--subDatasetSize', type=int, default=11000, help='Size of the subdatasets')
+    FLAGS.add_argument('--nTrainPerAgent', type=int, default=100, help='number of examples per agent')
     FLAGS.add_argument('--nClasses', type=int, default=3, help='number of classes in the subdataset')
     FLAGS.add_argument('--batchSize', type=int, default=10, help='number of examples fed to an unrolled layer')
     # Features
@@ -32,7 +33,7 @@ def parser(FLAGS):
     FLAGS.add_argument('--noisyOuts', action="store_true")
     FLAGS.add_argument('--createMetaDataset', action="store_true")
     FLAGS.add_argument('--repeatLayers', action="store_true")
-    return FLAGS, FLAGS.parse_args()
+    return FLAGS, FLAGS.parse_args(['--createMetaDataset'])
 
 def Generate_KdegreeGraphs(nExamples:int, N:int, K:int):
     Graph = np.zeros((nExamples, N, N))
@@ -85,11 +86,11 @@ def loadCNN(modelName, device):
 def Logging_Saving(args):
     if not os.path.exists("logs"):
         os.makedirs("logs")
-    logfile = f"./logs/logfile_{args.Trial}.log"
+    logfile = f"./logs/logfile_{args.Trial}_{args.nLayers}_{args.nClasses}.log"
     logging.basicConfig(filename=logfile, level=logging.DEBUG)
 
     if not os.path.exists(f"savedModels/{args.Trial}"):
         os.makedirs(f"savedModels/{args.Trial}")
-    modelPath = f"./savedModels/{args.Trial}/"
+    modelPath = f"./savedModels/{args.Trial}_{args.nLayers}_{args.nClasses}/"
     return modelPath
 
