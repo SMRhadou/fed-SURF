@@ -12,3 +12,8 @@ To see the options to configure:
 ```
 python3 main.py --help
 ```
+
+To install dependencies:
+```
+pip install -r requirements.txt
+```
