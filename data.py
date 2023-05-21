@@ -64,13 +64,14 @@ def subDataset(dataset, args, classes, outDist=False):
         dataTensor[i] = transform(data[i].astype(np.uint8))          # subDatasetSize x image size (3d)
     return dataTensor.float(), targets, transform
 
-def createMetaDataset(model, dataset, args, classesDist=None, outDist=False):
+def createMetaDataset(model, dataset, args, classesDist=None, outDist=False, test=False):
+    nDatasets = args.nDatasets if not test else 30
     nTrainPerAgent = args.nTrainPerAgent
     metadataset = {}
     batchSize = 100
     if classesDist is None:
         classesDist = classPermutation(dataset.classes, args.nClasses, 100)
-    for i in range(args.nDatasets):
+    for i in range(nDatasets):
         idx = np.random.randint(0, classesDist.shape[0], 1)[0]
         images, targets, transform = subDataset(dataset, args, classesDist[idx], outDist)                    # nAgents*nExamples (=subDatasetSize) x image size (3d) (Ex: 1200x3x32x32)
         features = torch.empty((args.subDatasetSize, model.module.linear.in_features))                                                      # nAgents*nExamples x nFeatures (Ex: 1200x2048)

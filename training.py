@@ -39,7 +39,7 @@ def train_uDGD(model, dataset, optimizer, objective_function, criterion, Graph, 
         validAccuracy = 0
         model.eval()
         for iset in range(nSets, len(dataset)):
-            printing = True if iset%20==0 else False
+            printing = True if iset%40==0 else False
             loss, accuracy, _ = evaluate(model, dataset[iset], objective_function, criterion,  eps=args.eps, printing=printing, SysID=Graph[iset], device=device, epoch=epoch, iset=iset)
             validloss += loss
             validAccuracy += accuracy
