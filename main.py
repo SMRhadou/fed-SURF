@@ -45,7 +45,6 @@ else:
         metadataset, classesDist = pickle.load(ObjFile)
 logging.debug("MetaDataset Created ...")
 
-
 # Create Graphs
 Graph, _ = utils.Generate_KdegreeGraphs(args.nDatasets, args.nAgents, args.nodeDegree)
 logging.debug("Graphs Created ...")
@@ -56,6 +55,9 @@ model = UnrolledDGD(args.nLayers, args.K, (featureSizePerClass+args.nClasses)*ar
                         repeatLayers=args.repeatLayers, coreLayers=args.coreLayers)
 model = model.to(device)
 logging.debug("Unrolled Model Created ...")                
+if args.pretrained:
+    checkpoint = torch.load(modelPath+"model_best.pth")
+    model.load_state_dict(checkpoint["model_state_dict"])
 
 # Training
 utils.printing(vars(args))
@@ -70,7 +72,7 @@ logging.debug("Evaluation ...")
 # Create Test meta dataset
 test_dataset = loadDataset(False)
 if args.createMetaDataset:
-    test_metadataset, _ = createMetaDataset(CNN, test_dataset, args, classesDist=classesDist)
+    test_metadataset, _ = createMetaDataset(CNN, test_dataset, args, classesDist=classesDist, test=True)
     if not os.path.exists("data/meta"):
         os.makedirs("data/meta")
     with open(f"./data/meta/Experiment1-test_{args.nClasses}.pkl", 'wb') as ObjFile:
@@ -83,7 +85,6 @@ else:
 GraphTest, _ = utils.Generate_KdegreeGraphs(args.nDatasets, args.nAgents, args.nodeDegree)
 
 # Load best model
-modelPath = f"./savedModels/{args.Trial}_{args.nLayers}_{args.nClasses}/"
 model = UnrolledDGD(args.nLayers, args.K, (featureSizePerClass+args.nClasses)*args.batchSize, (featureSizePerClass+1)*args.nClasses, args.batchSize,
                         repeatLayers=args.repeatLayers, coreLayers=args.coreLayers)
 logging.debug("Evaluation ...")
@@ -94,12 +95,12 @@ testloss, testAccuracy, dist2Opt, _ = utils_test.metrics(model, test_metadataset
 
 
 # %% Centralized CNN
-# logging.debug("="*60)
-# logging.debug("="*60)
-# logging.debug('CNN Experiments')
-# centralized_training(metadataset, criterion, args)
-# logging.debug("="*60)
-# logging.debug("="*60)
+logging.debug("="*60)
+logging.debug("="*60)
+logging.debug('CNN Experiments')
+centralized_training(test_metadataset, criterion, args)
+logging.debug("="*60)
+logging.debug("="*60)
 
 
 print("OK!")

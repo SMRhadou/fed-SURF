@@ -24,16 +24,17 @@ def parser(FLAGS):
     FLAGS.add_argument('--nDatasets', type=int, default=300, help='Size of Meta Dataset')
     FLAGS.add_argument('--nAgents', type=int, default=100, help='nAgents')
     FLAGS.add_argument('--nodeDegree', type=int, default=3, help='Node degree')
-    FLAGS.add_argument('--subDatasetSize', type=int, default=11000, help='Size of the subdatasets')
-    FLAGS.add_argument('--nTrainPerAgent', type=int, default=100, help='number of examples per agent')
-    FLAGS.add_argument('--nClasses', type=int, default=3, help='number of classes in the subdataset')
+    FLAGS.add_argument('--subDatasetSize', type=int, default=5000, help='Size of the subdatasets')
+    FLAGS.add_argument('--nTrainPerAgent', type=int, default=40, help='number of examples per agent')
+    FLAGS.add_argument('--nClasses', type=int, default=10, help='number of classes in the subdataset')
     FLAGS.add_argument('--batchSize', type=int, default=10, help='number of examples fed to an unrolled layer')
     # Features
     FLAGS.add_argument('--constrained', action="store_true")
     FLAGS.add_argument('--noisyOuts', action="store_true")
     FLAGS.add_argument('--createMetaDataset', action="store_true")
     FLAGS.add_argument('--repeatLayers', action="store_true")
-    return FLAGS, FLAGS.parse_args(['--createMetaDataset'])
+    FLAGS.add_argument('--pretrained', action="store_true")
+    return FLAGS, FLAGS.parse_args()
 
 def Generate_KdegreeGraphs(nExamples:int, N:int, K:int):
     Graph = np.zeros((nExamples, N, N))
@@ -89,8 +90,8 @@ def Logging_Saving(args):
     logfile = f"./logs/logfile_{args.Trial}_{args.nLayers}_{args.nClasses}.log"
     logging.basicConfig(filename=logfile, level=logging.DEBUG)
 
-    if not os.path.exists(f"savedModels/{args.Trial}"):
-        os.makedirs(f"savedModels/{args.Trial}")
+    if not os.path.exists(f"savedModels/{args.Trial}_{args.nLayers}_{args.nClasses}"):
+        os.makedirs(f"savedModels/{args.Trial}_{args.nLayers}_{args.nClasses}")
     modelPath = f"./savedModels/{args.Trial}_{args.nLayers}_{args.nClasses}/"
     return modelPath
 
