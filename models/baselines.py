@@ -31,7 +31,7 @@ def centralized_training(metadataset, criterion, args):
         best = np.inf
         for epoch in range(300):
             images = torch.reshape(metadataset[ibatch][0][0], (-1, 512)).float().to(device)
-            targets = torch.reshape(metadataset[ibatch][0][1], (-1, 3)).long()
+            targets = torch.reshape(metadataset[ibatch][0][1], (-1, args.nClasses)).long()
             optimizer.zero_grad()                
             logits = CNN2.module.forwardLast(images[:nTrain])
             loss = criterion(logits.cpu(), torch.argmax(targets, dim=1))
