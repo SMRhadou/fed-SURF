@@ -52,6 +52,7 @@ def metrics(model, metadataset, Graph, objective_function, criterion, evaluate=e
     dist2Opt = np.zeros((len(metadataset), model.nLayers+1))
     Acc = []
     obj = []
+    AccPerAgent = np.zeros((len(metadataset), ))
     model.eval()
     crossLoss = torch.zeros(len(metadataset), len(metadataset))
     for ibatch in tqdm(range(len(metadataset))):
@@ -61,6 +62,7 @@ def metrics(model, metadataset, Graph, objective_function, criterion, evaluate=e
         dist2Opt[ibatch] = np.array([torch.norm(outs[l] - outs[model.nLayers], p=2, dim=(0,1)).item() for l in range(model.nLayers+1)])
         obj.append(loss[-1].item())
         Acc.append(acc[-1].item())
+        AccPerAgent[ibatch] = accuracyPerAgents(outs[model.nLayers], metadataset[ibatch][1][0], metadataset[ibatch][1][1], device)[1]#.append(accuracyPerAgents(outs[model.nLayers], metadataset[ibatch][1][0], metadataset[ibatch][1][1], device))
         k += 1
         with torch.no_grad():
             for i in range(len(metadataset)):
@@ -68,7 +70,8 @@ def metrics(model, metadataset, Graph, objective_function, criterion, evaluate=e
 
     logging.debug(r'Accuracy {:.2f} +/- {:.2f}'.format(np.mean(Acc)*100, np.std(Acc)*100))
     logging.debug(r'Objective {} +/- {}'.format(np.mean(obj), np.std(obj)))
-    return testloss, testAccuracy, dist2Opt, crossLoss
+    logging.debug(r'Variability Per Agent {:.2f} +/- {:.2f}'.format(np.mean(AccPerAgent)*100, np.std(AccPerAgent)*100))
+    return testloss, testAccuracy, dist2Opt, AccPerAgent, crossLoss
 
 def plotting(loss_constrained, acc, dist2Opt, loss_unconstrained, acc_unconstrained, dist2Opt_unconstrained, title):
     dist2Opt[len(dist2Opt)-1] = 10
