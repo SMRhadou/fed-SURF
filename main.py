@@ -91,7 +91,7 @@ logging.debug("Evaluation ...")
 checkpoint = torch.load(modelPath+"model_best.pth")
 model.load_state_dict(checkpoint["model_state_dict"])
 
-testloss, testAccuracy, dist2Opt, _ = utils_test.metrics(model, test_metadataset, GraphTest, objective_function, criterion)
+testloss, testAccuracy, dist2Opt, _, _ = utils_test.metrics(model, test_metadataset, GraphTest, objective_function, criterion)
 
 
 # %% Centralized CNN
