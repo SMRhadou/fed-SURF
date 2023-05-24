@@ -14,30 +14,6 @@ plt.rcParams["font.family"] = "serif"
 plt.rcParams["font.serif"] = "Times New Roman"
 
 
-def AsynTraining_UDGD(model, dataset, Graph, nBOagents, **kwargs):
-    device = kwargs["device"]
-    images = dataset[0].float().to(device)
-    labels = dataset[1].float().to(device)
-    nAgents = images.shape[0]
-
-    y = torch.distributions.Normal(0.0, 5).sample((nAgents, model.LLSize)).float().to(device)
-    for l in range(model.nLayers+1):
-        BOagents = np.random.choice(nAgents, nBOagents, replace=False)
-        y[BOagents] = 0.0
-        
-        # Exchange data and update estimates (all agents) -- some will be discarded
-        idx = np.random.randint(0, dataset[0].shape[1], model.batchSize)
-        data = torch.cat((images[:,idx], labels[:,idx].unsqueeze(2)), dim=2).reshape((images.shape[0],-1))
-        S = torch.tensor(Graph, device=device).float()
-        y1 = model.layers[l]["GF"](y, S)
-        z = torch.cat((data, y), dim=1)
-        y2 = model.layers[l]["linear"](z)
-        y2 = nn.ReLU()(y2)
-        y = y1 - y2 
-        torch.cuda.empty_cache()
-    return y
-
-
 def metrics(model, metadataset, Graph, objective_function, criterion, evaluate=evaluate, **kwargs):
     if 'nBOagents' in kwargs.keys():
         nBOagents = kwargs['nBOagents']
