@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 
-from training import compute_grad
+from core.training import compute_grad
 
 class GraphFilter(nn.Module):
     def __init__(self, K: int):
@@ -81,7 +81,7 @@ class UnrolledDGD(nn.Module):
         if "device" in kwargs.keys():
             device = kwargs["device"]
         else:
-            device = "cuda:0"
+            device = "cuda"
 
         # Random Initialization
         y = torch.distributions.Normal(0.0, 5).sample((nAgents, self.LLSize)).float().to(device)
@@ -111,9 +111,14 @@ class UnrolledDGD(nn.Module):
         torch.cuda.empty_cache()
         return y, outs, indices
 
-    def forwardAsyn(self, Features, labels, Graph, nBOagents, **kwargs):
+    def forwardAsyn(self, Features, labels, Graph, nBOagents, BOflag=False, **kwargs):
         device = kwargs["device"]
         nAgents = Features.shape[0]
+        if kwargs["BOagents"] is not None:
+            BOagents = kwargs["BOagents"]
+        else:
+            BOflag = True
+            BOagents = np.zeros((self.nLayers, nBOagents))
 
         # Random Initialization
         y = torch.distributions.Normal(0.0, 5).sample((nAgents, self.LLSize)).float().to(device)
@@ -127,8 +132,10 @@ class UnrolledDGD(nn.Module):
                 layer = self.layers[l%self.coreLayers]
             else:
                 layer = self.layers[l]
-            BOagents = np.random.choice(nAgents, nBOagents, replace=False)
-            y[BOagents] = 0.0
+            if BOflag:
+                BOagents[l] = np.random.choice(nAgents, nBOagents, replace=False)
+            buffer = y[BOagents[l]]
+            y[BOagents[l]] = 0.0
             idx = np.random.randint(0, Features.shape[1], self.batchSize)
             indices.append(idx)
             data = torch.cat((Features[:,idx], labels[:,idx]), dim=2).reshape((Features.shape[0],-1)).float().to(device)
@@ -137,6 +144,89 @@ class UnrolledDGD(nn.Module):
             y2 = layer["linear"](z)
             y2 = nn.ReLU()(y2)
             y = y1 - y2 
+            y[BOagents[l]]= buffer
+            outs[l+1] = y
+        torch.cuda.empty_cache()
+        return y, outs, indices, BOagents
+
+class UnrolledDGD_noGNN(UnrolledDGD):
+    def __init__(self, nLayers:int, K:int, dataSize:int, LLSize:int, batchSize:int, repeatLayers=False, coreLayers=10):
+        super(UnrolledDGD_noGNN, self).__init__(nLayers, K, dataSize, LLSize, batchSize, repeatLayers, coreLayers)
+        self.layers = nn.ModuleList()
+        for l in range(self.coreLayers):
+            layer = nn.ModuleDict({
+                "linear":  LinearLayer(self.dataSize+self.LLSize, self.LLSize)})#MLP([self.dataSize+self.LLSize, 7000, self.LLSize])}) #MLP([self.dataSize+self.LLSize, 500, self.LLSize])})
+            self.layers.append(layer)
+
+    def forward(self, Features:torch.tensor, labels:torch.tensor, Graph:torch.tensor, noisyOuts=False, **kwargs):         
+        nAgents = Features.shape[0]
+        if "device" in kwargs.keys():
+            device = kwargs["device"]
+        else:
+            device = "cuda"
+
+        # Random Initialization
+        y = torch.distributions.Normal(0.0, 5).sample((nAgents, self.LLSize)).float().to(device)
+        
+        # Forward path
+        outs = {}
+        outs[0] = y
+        indices = []
+        for l in range(self.nLayers):
+            if self.repeatLayers:
+                layer = self.layers[l%self.coreLayers]
+            else:
+                layer = self.layers[l]
+            idx = np.random.randint(0, Features.shape[1], self.batchSize)
+            indices.append(idx)
+            data = torch.cat((Features[:,idx], labels[:,idx]), dim=2).reshape((Features.shape[0],-1)).float().to(device)
+            y1 = Graph @ y
+            z = torch.cat((data, y), dim=1)
+            y2 = layer["linear"](z)
+            y2 = nn.ReLU()(y2)
+            y = y1 - y2 
+            # Noisy outputs
+            if noisyOuts and l<self.nLayers-1:
+                sigma = 1/(l+1)**2#torch.norm(compute_grad(x, kwargs['objective'], kwargs['test_dataset'], kwargs['device']), p=2, dim=1)
+                y = y + torch.distributions.Normal(0.0, sigma).sample(y.shape).float().to(device)
             outs[l+1] = y
         torch.cuda.empty_cache()
         return y, outs, indices
+
+    def forwardAsyn(self, Features, labels, Graph, nBOagents, BOflag=False, **kwargs):
+        device = kwargs["device"]
+        nAgents = Features.shape[0]
+        if kwargs["BOagents"] is not None:
+            BOagents = kwargs["BOagents"]
+        else:
+            BOflag = True
+            BOagents = np.zeros((self.nLayers, nBOagents))
+
+        # Random Initialization
+        y = torch.distributions.Normal(0.0, 5).sample((nAgents, self.LLSize)).float().to(device)
+        
+        # Forward path
+        outs = {}
+        outs[0] = y
+        indices = []
+        for l in range(self.nLayers):
+            if self.repeatLayers:
+                layer = self.layers[l%self.coreLayers]
+            else:
+                layer = self.layers[l]
+            if BOflag:
+                BOagents[l] = np.random.choice(nAgents, nBOagents, replace=False)
+            buffer = y[BOagents[l]]
+            y[BOagents[l]] = 0.0
+            idx = np.random.randint(0, Features.shape[1], self.batchSize)
+            indices.append(idx)
+            data = torch.cat((Features[:,idx], labels[:,idx]), dim=2).reshape((Features.shape[0],-1)).float().to(device)
+            y1 = Graph @ y
+            z = torch.cat((data, y), dim=1)
+            y2 = layer["linear"](z)
+            y2 = nn.ReLU()(y2)
+            y = y1 - y2 
+            y[BOagents[l]]= buffer
+            outs[l+1] = y
+        torch.cuda.empty_cache()
+        return y, outs, indices, BOagents

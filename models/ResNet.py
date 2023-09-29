@@ -71,11 +71,11 @@ class Bottleneck(nn.Module):
 
 
 class ResNet(nn.Module):
-    def __init__(self, block, num_blocks, num_classes=10):
+    def __init__(self, block, num_blocks, num_classes=10, inFeatures=3):
         super(ResNet, self).__init__()
         self.in_planes = 64
 
-        self.conv1 = nn.Conv2d(3, 64, kernel_size=3,
+        self.conv1 = nn.Conv2d(inFeatures, 64, kernel_size=3,
                                stride=1, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(64)
         self.layer1 = self._make_layer(block, 64, num_blocks[0], stride=1)
@@ -118,8 +118,8 @@ class ResNet(nn.Module):
             param.requires_grad = False
     
 class ResNetConv(ResNet):
-    def __init__(self, block, num_blocks, num_classes=10):
-        super(ResNetConv, self).__init__(block, num_blocks, num_classes=10)
+    def __init__(self, block, num_blocks, num_classes=10, inFeatures=3):
+        super(ResNetConv, self).__init__(block, num_blocks, num_classes=10, inFeatures=inFeatures)
 
     def forward(self, x):
         with torch.no_grad():
@@ -138,8 +138,8 @@ class ResNetConv(ResNet):
         return out
 
 
-def ResNet18():
-    return ResNet(BasicBlock, [2, 2, 2, 2])
+def ResNet18(inDim):
+    return ResNet(BasicBlock, [2, 2, 2, 2], inFeatures=inDim)
 
 
 def ResNet34():
@@ -161,8 +161,8 @@ def ResNet152():
 def ResNetConv50():
     return ResNetConv(Bottleneck, [3, 4, 6, 3])
 
-def ResNetConv18():
-    return ResNetConv(BasicBlock, [2, 2, 2, 2])
+def ResNetConv18(inDim):
+    return ResNetConv(BasicBlock, [2, 2, 2, 2], inFeatures=inDim)
 
 
 def test():

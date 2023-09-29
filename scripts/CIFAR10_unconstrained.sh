@@ -1,0 +1,18 @@
+python3 main.py \
+--Trial Constrained \
+--Dataset CIFAR10 \
+--nLayers 10 \
+--K 3 \
+--nEpochs 500 \
+--lr 1e-2 \
+--lr_dual 1e-2 \
+--eps 0.1 \
+--nDatasets 600 \
+--nAgents 100 \
+--nodeDegree 3 \
+--subDatasetSize 6000 \
+--nTrainPerAgent 45 \
+--nClasses 10 \
+--batchSize 10 \
+--createMetaDataset \
+--gpuID 0
