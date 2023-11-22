@@ -39,13 +39,13 @@ CNN = utils.loadCNN(ResNetConv18, args.Dataset, device)
 
 # Create Meta Dataset
 if args.createMetaDataset:
-    metadataset = createMetaDataset(CNN, dataset, args)
+    metadataset = createMetaDirichletDataset(CNN, dataset, args)
     if not os.path.exists("data/meta"):
         os.makedirs("data/meta")
-    with open(f"./data/meta/{args.Dataset}.pkl", 'wb') as ObjFile:
+    with open(f"./data/meta/{args.Dataset}-Dirichlet-{args.alpha}.pkl", 'wb') as ObjFile:
         pickle.dump(metadataset, ObjFile)
 else:
-    with open(f"./data/meta/{args.Dataset}.pkl", 'rb') as ObjFile:
+    with open(f"./data/meta/{args.Dataset}-Dirichlet-{args.alpha}.pkl", 'rb') as ObjFile:
         metadataset = pickle.load(ObjFile)
 logging.debug("MetaDataset Created ...")
 
@@ -57,6 +57,7 @@ objective_function = inner_loss
 
 # Create Graphs
 Graph, _ = utils.Generate_KdegreeGraphs(args.nDatasets, args.nAgents, args.nodeDegree)
+# Graph = utils.Generate_randGraphs(args.nDatasets, args.nAgents, 0.1)
 logging.debug("Graphs Created ...")
 
 # Initialize/Load the unrolled model
@@ -92,6 +93,7 @@ else:
 
 # Generate Graphs
 GraphTest, _ = utils.Generate_KdegreeGraphs(args.nDatasets, args.nAgents, args.nodeDegree)
+# GraphTest = utils.Generate_randGraphs(args.nDatasets, args.nAgents, 0.1)
 
 # Load best model
 model = UnrolledDGD(args.nLayers, args.K, (featureSizePerClass+args.nClasses)*args.batchSize, LLSize, args.batchSize,
