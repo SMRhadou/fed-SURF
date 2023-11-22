@@ -64,7 +64,7 @@ def plotting(loss_constrained, acc, dist2Opt, loss_unconstrained, acc_unconstrai
     # Figure 1: Distance to optimal
     sns.set_context('notebook')
     sns.set_style('darkgrid')
-    plt.figure(figsize=(4,3))
+    plt.figure(figsize=(8,3))
     plt.subplot(1,2,1)
     plt.plot(np.arange(loss_constrained.shape[1]), np.mean(loss_constrained, axis=0), 'b', label='SURF')
     plt.errorbar(np.arange(loss_constrained.shape[1]), np.mean(loss_constrained, axis=0), yerr=np.std(loss_constrained, axis=0), fmt='b', capsize=3, alpha=0.5)
