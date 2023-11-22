@@ -10,6 +10,8 @@ import torch.nn.functional as F
 import torchvision
 import torchvision.transforms as transforms
 
+from fedlab.utils.dataset.partition import CIFAR10Partitioner
+
 def loadDataset(train, Dataset='CIFAR10'):
     if Dataset == 'CIFAR10':
         trainset = torchvision.datasets.CIFAR10(
@@ -30,11 +32,7 @@ def classPermutation(classes, nClasses, nPerm):
         P[i] = np.random.choice(len(classes), nClasses, replace=False)
     return P
 
-'''
-1. cretate a distribution of classes (a list of occurances) and store it
-2. construct this dataset based on the distribution
-3. divide it uniformly among agents
-'''
+
 def classDistribution(classes):
     p = np.random.randint(1, 100, len(classes))
     return p/np.sum(p)
@@ -72,6 +70,34 @@ def createMetaDataset(model, dataset, args, outDist=False, test=False):
                             (distributedFeatures[:,nTrainPerAgent:], distributedTargets[:,nTrainPerAgent:]), transform)   # (train_dataset, test_dataset, transform)
     torch.cuda.empty_cache()
     return metadataset
+
+
+def createMetaDirichletDataset(model, dataset, args, outDist=False, test=False):
+    nDatasets = args.nDatasets if not test else 30
+    nTrainPerAgent = args.nTrainPerAgent
+    metadataset = {}
+    batchSize = 100
+    for i in range(nDatasets):
+        transform = randTransform(args)
+        hetero_dir_part = CIFAR10Partitioner(dataset.targets,
+                                            args.nAgents,
+                                            balance=True,
+                                            partition="dirichlet",
+                                            dir_alpha=args.alpha,
+                                            seed=2021)
+        one_hot = F.one_hot(torch.arange(0, args.nClasses) % args.nClasses)
+        img = torch.stack([transform(dataset.data[k].astype(np.uint8)) for k in range(len(dataset.data))], dim=0)
+        distributedFeatures = torch.empty((args.nAgents, args.subDatasetSize//args.nAgents, model.module.linear.in_features))                                                      # nAgents*nExamples x nFeatures (Ex: 1200x2048)
+        distributedTargets = torch.empty((args.nAgents, args.subDatasetSize//args.nAgents, args.nClasses)) 
+        for j, idx in hetero_dir_part.client_dict.items():
+            distributedFeatures[j] = model(img[idx][:args.subDatasetSize//args.nAgents].to('cuda'))
+            distributedTargets[j] = one_hot[torch.tensor(dataset.targets)[idx][:args.subDatasetSize//args.nAgents]]             
+        metadataset[i] = ((distributedFeatures[:,:nTrainPerAgent], distributedTargets[:,:nTrainPerAgent]), 
+                            (distributedFeatures[:,nTrainPerAgent:], distributedTargets[:,nTrainPerAgent:]))   # (train_dataset, test_dataset, transform)
+    torch.cuda.empty_cache()
+    return metadataset
+
+
 
 def buildsubDataset(dataset, args, classDist):
     nClasses = len(classDist)#args.nClasses
