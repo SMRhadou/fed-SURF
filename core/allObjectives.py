@@ -6,6 +6,9 @@ from torch.autograd.functional import jacobian
 #%% Loss and Accuracy
 def inner_loss(last_layer, images, targets, criterion=nn.CrossEntropyLoss()):
     loss = 0
+    if len(images.shape) < 3:
+        images = images.unsqueeze(1)
+        targets = targets.unsqueeze(1)
     if len(last_layer.shape) < len(images.shape):
         last_layer = torch.reshape(last_layer, (last_layer.shape[0], images.shape[-1]+1, -1))
     logits =  (images @ last_layer[:,:-1] + last_layer[:, -1, None]).cpu()
