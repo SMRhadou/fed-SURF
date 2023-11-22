@@ -11,7 +11,7 @@ import torch.backends.cudnn as cudnn
 
 def parser(FLAGS):
     FLAGS = argparse.ArgumentParser(description='SURF')
-    FLAGS.add_argument('--Trial', type=str, default='FullCNN', help='Trial')
+    FLAGS.add_argument('--Trial', type=str, default='Dirichlet', help='Trial')
     FLAGS.add_argument('--Dataset', type=str, default='CIFAR10', help='Dataset')
     # Model Parameters
     FLAGS.add_argument('--nLayers', type=int, default=10, help='nLayers')
@@ -23,6 +23,7 @@ def parser(FLAGS):
     FLAGS.add_argument('--lr_dual', type=float, default=1e-2, help='lr_dual')
     FLAGS.add_argument('--eps', type=float, default=0.01, help='epsilon')
     # Data Parameters
+    FLAGS.add_argument('--alpha', type=float, default=1, help='Dirichlet concentration parameter')
     FLAGS.add_argument('--nDatasets', type=int, default=600, help='Size of Meta Dataset')
     FLAGS.add_argument('--nAgents', type=int, default=100, help='nAgents')
     FLAGS.add_argument('--nodeDegree', type=int, default=3, help='Node degree')
@@ -36,7 +37,7 @@ def parser(FLAGS):
     FLAGS.add_argument('--createMetaDataset', action="store_true")
     FLAGS.add_argument('--repeatLayers', action="store_true")
     FLAGS.add_argument('--pretrained', action="store_true")
-    FLAGS.add_argument('--gpuID', type=str, default="0", help='choose a GPU')
+    FLAGS.add_argument('--gpuID', type=str, default="1", help='choose a GPU')
     FLAGS.add_argument('--mode', type=str, default="0", help='0-last layer of a resnet or 1-lstm')
     return FLAGS, FLAGS.parse_args()
 
@@ -56,6 +57,18 @@ def Generate_KdegreeGraphs(nExamples:int, N:int, K:int):
         Graph[exp] = (S.T/np.sum(S, axis=1)).T
         nGraph[exp] = S
     return Graph, nGraph
+
+def Generate_starGraphs(nExamples:int, N:int):
+    Graph = np.zeros((nExamples, N, N))
+    nGraph = np.zeros((nExamples, N, N))
+    for exp in range(nExamples):
+        S = np.zeros((N, N))
+        S[:,0] = 1
+        S[0,:] = 1
+        S[0,0] = 0
+        S /= np.real(np.max(np.linalg.eigvals(S)))
+        Graph[exp] = S
+    return Graph
 
 def Generate_randGraphs(nExamples:int, N:int, p:float):
     print("Generate new graphs ...")
