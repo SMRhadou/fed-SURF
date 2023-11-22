@@ -7,6 +7,10 @@ To run the main experiment in the paper:
 ```
 python3 main.py --constrained --createMetaDataset
 ```
+Or we can simple run the scripts
+```
+bash scripts/SCRIPT_FILE.sh
+```
 
 To see the options to configure:
 ```
