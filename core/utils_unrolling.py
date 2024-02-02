@@ -11,21 +11,22 @@ import torch.backends.cudnn as cudnn
 
 def parser(FLAGS):
     FLAGS = argparse.ArgumentParser(description='SURF')
-    FLAGS.add_argument('--Trial', type=str, default='Dirichlet', help='Trial')
+    FLAGS.add_argument('--Trial', type=str, default='ICML_randomGraph', help='Trial')
     FLAGS.add_argument('--Dataset', type=str, default='CIFAR10', help='Dataset')
     # Model Parameters
     FLAGS.add_argument('--nLayers', type=int, default=10, help='nLayers')
     FLAGS.add_argument('--coreLayers', type=int, default=5, help='Core layers to be repeated')
-    FLAGS.add_argument('--K', type=int, default=3, help='FilterTaps')
+    FLAGS.add_argument('--K', type=int, default=3, help='FilterTaps (K+1)')
     # Learning Parameters
     FLAGS.add_argument('--nEpochs', type=int, default=200, help='nEpochs')
     FLAGS.add_argument('--lr', type=float, default=1e-3, help='lr')
     FLAGS.add_argument('--lr_dual', type=float, default=1e-2, help='lr_dual')
     FLAGS.add_argument('--eps', type=float, default=0.01, help='epsilon')
     # Data Parameters
-    FLAGS.add_argument('--alpha', type=float, default=1, help='Dirichlet concentration parameter')
+    FLAGS.add_argument('--alpha', type=float, default=0.7, help='Dirichlet concentration parameter')
     FLAGS.add_argument('--nDatasets', type=int, default=600, help='Size of Meta Dataset')
     FLAGS.add_argument('--nAgents', type=int, default=100, help='nAgents')
+    FLAGS.add_argument('--GraphType', type=str, default='Kdegree', help='Graph Type')
     FLAGS.add_argument('--nodeDegree', type=int, default=3, help='Node degree')
     FLAGS.add_argument('--subDatasetSize', type=int, default=6000, help='Size of the subdatasets')
     FLAGS.add_argument('--nTrainPerAgent', type=int, default=45, help='number of examples per agent')
@@ -37,7 +38,7 @@ def parser(FLAGS):
     FLAGS.add_argument('--createMetaDataset', action="store_true")
     FLAGS.add_argument('--repeatLayers', action="store_true")
     FLAGS.add_argument('--pretrained', action="store_true")
-    FLAGS.add_argument('--gpuID', type=str, default="1", help='choose a GPU')
+    FLAGS.add_argument('--gpuID', type=str, default="0", help='choose a GPU')
     FLAGS.add_argument('--mode', type=str, default="0", help='0-last layer of a resnet or 1-lstm')
     return FLAGS, FLAGS.parse_args()
 
@@ -82,10 +83,10 @@ def Generate_randGraphs(nExamples:int, N:int, p:float):
     return Graph
 
 def printing(args):
-    logging.debug("="*60)
+    logging.info("="*60)
     for i, item in args.items():
-        logging.debug("{}: {}".format(i, item))
-    logging.debug("="*60)
+        logging.info("{}: {}".format(i, item))
+    logging.info("="*60)
 
 
 def loadCNN(modelName, datasetName, device):
