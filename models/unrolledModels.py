@@ -18,6 +18,30 @@ class GraphFilter(nn.Module):
             xTilde = xTilde @ S                     # Recursive application of S
             kAggre += self.weights[k] * xTilde
         return kAggre.T
+    
+class GraphFilter_lessComm(nn.Module):
+    # Only for star graphs
+    def __init__(self, K: int, M:int):
+        super(GraphFilter_lessComm, self).__init__()
+        self.K = K
+        self.M = M
+        randw = torch.distributions.Uniform(0, 0.1).sample((K,))    # Initialize the filter taps
+        self.weights = nn.Parameter(randw.float())
+    
+    def forward(self, X:torch.tensor, S:torch.tensor):
+        kAggre = self.weights[0] * X.T
+        kAggre[:,0] = 0 # omitting k=0 at the server in GF
+        xTilde = X.T
+        for k in range(1, self.K):
+            idx =  np.random.choice(S.shape[0], self.M, replace=False)
+            zeros = torch.zeros_like(S)
+            zeros[idx, 0] = 1       # The server receives the updated weights from a subset of agents 
+            zeros[0, 1:] = 1        # All agents receive updated weights from the server
+            Snew = S * zeros
+            Snew /= torch.max(torch.real(torch.linalg.eigvals(Snew)))
+            xTilde = xTilde @ Snew                     # Recursive application of S
+            kAggre += self.weights[k] * xTilde
+        return kAggre.T
 
 class LinearLayer(nn.Module):
     def __init__(self, p0: int, p1: int):
@@ -230,3 +254,64 @@ class UnrolledDGD_noGNN(UnrolledDGD):
             outs[l+1] = y
         torch.cuda.empty_cache()
         return y, outs, indices, BOagents
+
+class UnrolledDGD_classical(nn.Module):
+    def __init__(self, nLayers:int, K:int, dataSize:int, LLSize:int, batchSize:int, repeatLayers=False, coreLayers=10, M=10):
+        super(UnrolledDGD_classical, self).__init__()
+        self.K = K
+        self.M = M
+        self.nLayers = nLayers
+        self.LLSize = LLSize
+        self.dataSize = dataSize
+        self.repeatLayers = repeatLayers
+        self.batchSize = batchSize
+        if self.repeatLayers:
+            self.coreLayers = coreLayers
+        else:
+            self.coreLayers = nLayers
+        self.layers = nn.ModuleList()
+        for l in range(self.coreLayers):
+            layer = nn.ModuleDict({
+                "GF": GraphFilter_lessComm(self.K, self.M),
+                "linear":  LinearLayer(self.dataSize+self.LLSize, self.LLSize)})#MLP([self.dataSize+self.LLSize, 7000, self.LLSize])}) #MLP([self.dataSize+self.LLSize, 500, self.LLSize])})
+            self.layers.append(layer)
+        self.activations = nn.ModuleDict({
+            "tanh": nn.Tanh(),
+            "ReLU": nn.ReLU()})
+
+    def forward(self, Features:torch.tensor, labels:torch.tensor, Graph:torch.tensor, noisyOuts=False, **kwargs):         
+        nAgents = Features.shape[0]
+        if "device" in kwargs.keys():
+            device = kwargs["device"]
+        else:
+            device = "cuda"
+
+        # Random Initialization
+        y = torch.distributions.Normal(0.0, 5).sample((nAgents, self.LLSize)).float().to(device)
+        torch.autograd.set_detect_anomaly(True)
+        # Forward path
+        outs = {}
+        outs[0] = y
+        indices = []
+        for l in range(self.nLayers):
+            if self.repeatLayers:
+                layer = self.layers[l%self.coreLayers]
+            else:
+                layer = self.layers[l]
+            idx = np.random.randint(0, Features.shape[1], self.batchSize)
+            indices.append(idx)
+            data = torch.cat((Features[:,idx], labels[:,idx]), dim=2).reshape((Features.shape[0],-1)).float().to(device)
+            y1 = layer["GF"](y, Graph)
+            z = torch.cat((data, y), dim=1)
+            y2 = layer["linear"](z)
+            y2 = nn.ReLU()(y2)
+            ones = torch.ones_like(y2)
+            ones[0] = 0             # The server does not update its weights    
+            y = y1 - y2 * ones
+            # Noisy outputs
+            if noisyOuts and l<self.nLayers-1:
+                sigma = 1/(l+1)**2#torch.norm(compute_grad(x, kwargs['objective'], kwargs['test_dataset'], kwargs['device']), p=2, dim=1)
+                y = y + torch.distributions.Normal(0.0, sigma).sample(y.shape).float().to(device)
+            outs[l+1] = y
+        torch.cuda.empty_cache()
+        return y, outs, indices
