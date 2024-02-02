@@ -10,6 +10,11 @@ from torch.functional import F
 import torch.optim as optim
 
 import core.utils_unrolling as utils
+# Logging and Saving Path
+FLAGS = argparse.ArgumentParser()
+_, args = utils.parser(FLAGS)
+modelPath = utils.Logging_Saving(args)
+
 import core.utils_testing as utils_test
 from models.unrolledModels import *
 from models.baselines import *
@@ -23,11 +28,6 @@ torch.cuda.manual_seed(0)
 np.random.seed(0)
 random.seed(0)
 
-
-# Logging and Saving Path
-FLAGS = argparse.ArgumentParser()
-_, args = utils.parser(FLAGS)
-modelPath = utils.Logging_Saving(args)
 
 # Cuda
 os.environ["CUDA_VISIBLE_DEVICES"] = args.gpuID
@@ -47,7 +47,7 @@ if args.createMetaDataset:
 else:
     with open(f"./data/meta/{args.Dataset}-Dirichlet-{args.alpha}.pkl", 'rb') as ObjFile:
         metadataset = pickle.load(ObjFile)
-logging.debug("MetaDataset Created ...")
+logging.info("MetaDataset Created ...")
 
 # Which problenm to solve
 featureSizePerClass = CNN.module.linear.in_features
@@ -56,16 +56,20 @@ objective_function = inner_loss
 
 
 # Create Graphs
-Graph, _ = utils.Generate_KdegreeGraphs(args.nDatasets, args.nAgents, args.nodeDegree)
-# Graph = utils.Generate_randGraphs(args.nDatasets, args.nAgents, 0.1)
-logging.debug("Graphs Created ...")
+if args.GraphType == 'Kdegree':
+    Graph, _ = utils.Generate_KdegreeGraphs(args.nDatasets, args.nAgents, args.nodeDegree)
+elif args.GraphType == 'Random':
+    Graph = utils.Generate_randGraphs(args.nDatasets, args.nAgents, 0.1)
+elif args.GraphType == 'star':
+    Graph = utils.Generate_starGraphs(args.nDatasets, args.nAgents)
+logging.info("Graphs Created ...")
 
-# Initialize/Load the unrolled model
+# Initialize/Load the unrolled model # Use UnrolledDGD_classical instead for classical FL
 model = UnrolledDGD(args.nLayers, args.K, (featureSizePerClass+args.nClasses)*args.batchSize, 
                         LLSize, args.batchSize, repeatLayers=args.repeatLayers, coreLayers=args.coreLayers)
 #model = nn.DataParallel(model)
 model = model.to(device)
-logging.debug("Unrolled Model Created ...")                
+logging.info("Unrolled Model Created ...")                
 if args.pretrained:
     checkpoint = torch.load(modelPath+"model_best.pth")
     model.load_state_dict(checkpoint["model_state_dict"])
@@ -78,7 +82,7 @@ _, _ = train_uDGD(model, metadataset, optimizer, objective_function, criterion, 
 utils.printing(vars(args))
 
 # %% Evaluation
-logging.debug("Evaluation ...")
+logging.info("Evaluation ...")
 # Create Test meta dataset
 test_dataset = loadDataset(False, args.Dataset)
 if args.createMetaDataset:
@@ -92,13 +96,17 @@ else:
         test_metadataset = pickle.load(ObjFile)
 
 # Generate Graphs
-GraphTest, _ = utils.Generate_KdegreeGraphs(args.nDatasets, args.nAgents, args.nodeDegree)
-# GraphTest = utils.Generate_randGraphs(args.nDatasets, args.nAgents, 0.1)
+if args.GraphType == 'Kdegree':
+    GraphTest, _ = utils.Generate_KdegreeGraphs(args.nDatasets, args.nAgents, args.nodeDegree)
+elif args.GraphType == 'Random':
+    GraphTest = utils.Generate_randGraphs(args.nDatasets, args.nAgents, 0.1)
+elif args.GraphType == 'star':
+    GraphTest = utils.Generate_starGraphs(args.nDatasets, args.nAgents)
 
 # Load best model
 model = UnrolledDGD(args.nLayers, args.K, (featureSizePerClass+args.nClasses)*args.batchSize, LLSize, args.batchSize,
                         repeatLayers=args.repeatLayers, coreLayers=args.coreLayers)
-logging.debug("Evaluation ...")
+logging.info("Evaluation ...")
 checkpoint = torch.load(modelPath+"model_best.pth")
 model.load_state_dict(checkpoint["model_state_dict"])
 
@@ -106,12 +114,12 @@ testloss, testAccuracy, dist2Opt, _, _, _ = utils_test.metrics(model, test_metad
 
 
 # %% Centralized CNN
-logging.debug("="*60)
-logging.debug("="*60)
-logging.debug('CNN Experiments')
+logging.info("="*60)
+logging.info("="*60)
+logging.info('CNN Experiments')
 centralized_training(test_metadataset, criterion, args)
-logging.debug("="*60)
-logging.debug("="*60)
+logging.info("="*60)
+logging.info("="*60)
 
 
 print("OK!")
