@@ -26,7 +26,7 @@ def parser(FLAGS):
     FLAGS.add_argument('--alpha', type=float, default=0.7, help='Dirichlet concentration parameter')
     FLAGS.add_argument('--nDatasets', type=int, default=600, help='Size of Meta Dataset')
     FLAGS.add_argument('--nAgents', type=int, default=100, help='nAgents')
-    FLAGS.add_argument('--GraphType', type=str, default='Kdegree', help='Graph Type')
+    FLAGS.add_argument('--GraphType', type=str, default='Kdegree', help='Graph Type, choose between Kdegree, Random, star')
     FLAGS.add_argument('--nodeDegree', type=int, default=3, help='Node degree')
     FLAGS.add_argument('--subDatasetSize', type=int, default=6000, help='Size of the subdatasets')
     FLAGS.add_argument('--nTrainPerAgent', type=int, default=45, help='number of examples per agent')
