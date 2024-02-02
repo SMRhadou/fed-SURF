@@ -28,7 +28,7 @@ def train_uDGD(model, dataset, optimizer, objective_function, criterion, Graph, 
                                             nSets=nSets, noisyOuts=noisyOuts, nClasses = kwargs['nClasses'], 
                                             lr_dual = lr_dual, eps=args.eps, device=device)
             NU[epoch+1] = nu.detach().cpu().numpy()
-            logging.debug('duals {}'.format(list(nu.detach().cpu().numpy())))
+            logging.info('duals {}'.format(list(nu.detach().cpu().numpy())))
         else:
             model = unconstrained_learning(model, dataset, optimizer, objective_function, criterion, SysID=Graph, 
                                             nSets=nSets, noisyOuts=noisyOuts, nClasses = kwargs['nClasses'], eps=args.eps, device=device)
@@ -56,7 +56,7 @@ def train_uDGD(model, dataset, optimizer, objective_function, criterion, Graph, 
                         "model_state_dict": model.state_dict(),
                         "valid_loss": validloss
                         }, modelPath+"model_best.pth")
-        logging.debug("validloss {} ({:.2f}), best: {} ({:.2f}) achieved at epoch {}\n".format(validloss, validAccuracy, best, bestAccuracy, epochBest))
+        logging.info("validloss {} ({:.2f}), best: {} ({:.2f}) achieved at epoch {}\n".format(validloss, validAccuracy, best, bestAccuracy, epochBest))
             
         del validloss
         torch.cuda.empty_cache()
@@ -108,7 +108,7 @@ def unconstrained_learning(model, dataset, optimizer, objective_function, criter
     device = kwargs["device"]
     Graph = kwargs["SysID"]
     nSets = kwargs["nSets"]
-    
+
     loss = 0
     for iset in range(nSets):
         images, labels = dataset[iset][0]

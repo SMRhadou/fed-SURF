@@ -74,7 +74,7 @@ def centralized_training(metadataset, criterion, args):
         logits = CNN2.module.forwardLast(images).cpu()
         outputs = torch.max(logits, axis=1)[1]
         testAccuracy15.append(torch.sum(outputs == torch.argmax(targets, dim=1))/targets.shape[0])
-    logging.debug(r'Accuracy at the end {:.2f} +/- {:.2f}'.format(np.mean(testAccuracy2)*100, np.std(testAccuracy2)*100))
-    logging.debug(r'Accuracy (truncated) {:.2f} +/- {:.2f}'.format(np.mean(testAccuracy15)*100, np.std(testAccuracy15)*100))
+    logging.info(r'Accuracy at the end {:.2f} +/- {:.2f}'.format(np.mean(testAccuracy2)*100, np.std(testAccuracy2)*100))
+    logging.info(r'Accuracy (truncated) {:.2f} +/- {:.2f}'.format(np.mean(testAccuracy15)*100, np.std(testAccuracy15)*100))
 
     return np.mean(testAccuracy2)*100, np.std(testAccuracy2)*100

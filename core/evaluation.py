@@ -56,12 +56,12 @@ def evaluate(model, dataset, objective_function, criterion, eps, printing=True, 
     
     if printing and epoch != 'Test':
         cons, grad = GradPenalty(objective_function, dataset[0], outsValid, indices, eps=eps, **kwargs)
-        logging.debug('gradients {}'.format(list(grad.detach().cpu().numpy())))
-        logging.debug('constraints {}'.format(list(cons.detach().cpu().numpy())))
-        logging.debug('loss across layers: {}'.format([objective_function(outsValid[i], dataset[1][0].float().to(device),
+        logging.info('gradients {}'.format(list(grad.detach().cpu().numpy())))
+        logging.info('constraints {}'.format(list(cons.detach().cpu().numpy())))
+        logging.info('loss across layers: {}'.format([objective_function(outsValid[i], dataset[1][0].float().to(device),
                                                             dataset[1][1].long(), criterion).item() for i in range(model.nLayers+1)]))
         
-        logging.debug("Epoch {}, batch {}, Loss {:.4f}, accuracy {:.2f}".format(epoch, iset, validloss.item(), validAccuracy.item()))
+        logging.info("Epoch {}, batch {}, Loss {:.4f}, accuracy {:.2f}".format(epoch, iset, validloss.item(), validAccuracy.item()))
         
     # Save results
     if saveResults and resultPath is not None:
@@ -101,12 +101,12 @@ def evaluateAsyn(model, dataset, objective_function, criterion, eps, nBOagents=1
     
     if printing and epoch != 'Test':
         cons, grad = GradPenalty(objective_function, dataset[0], outsValid, indices, eps=eps, **kwargs)
-        logging.debug('gradients {}'.format(list(grad.detach().cpu().numpy())))
-        logging.debug('constraints {}'.format(list(cons.detach().cpu().numpy())))
-        logging.debug('loss across layers: {}'.format([objective_function(outsValid[i], dataset[1][0].float().to(device),
+        logging.info('gradients {}'.format(list(grad.detach().cpu().numpy())))
+        logging.info('constraints {}'.format(list(cons.detach().cpu().numpy())))
+        logging.info('loss across layers: {}'.format([objective_function(outsValid[i], dataset[1][0].float().to(device),
                                                             dataset[1][1].long(), criterion).item() for i in range(model.nLayers+1)]))
         
-        logging.debug("Epoch {}, batch {}, Loss {:.4f}, accuracy {:.2f}".format(epoch, iset, validloss.item(), validAccuracy.item()))
+        logging.info("Epoch {}, batch {}, Loss {:.4f}, accuracy {:.2f}".format(epoch, iset, validloss.item(), validAccuracy.item()))
         
     # Save results
     if saveResults and resultPath is not None:
@@ -146,12 +146,12 @@ def evaluateAsyn(model, dataset, objective_function, criterion, eps, nBOagents=1
     
 #     if printing and epoch != 'Test':
 #         cons, grad = GradPenalty(objective_function, dataset[0], outsValid, indices, eps=eps, **kwargs)
-#         logging.debug('gradients {}'.format(list(grad.detach().cpu().numpy())))
-#         logging.debug('constraints {}'.format(list(cons.detach().cpu().numpy())))
-#         logging.debug('loss across layers: {}'.format([objective_function(outsValid[i], dataset[1][0].float().to(device),
+#         logging.info('gradients {}'.format(list(grad.detach().cpu().numpy())))
+#         logging.info('constraints {}'.format(list(cons.detach().cpu().numpy())))
+#         logging.info('loss across layers: {}'.format([objective_function(outsValid[i], dataset[1][0].float().to(device),
 #                                                             dataset[1][1].long(), criterion).item() for i in range(model.nLayers+1)]))
         
-#         logging.debug("Epoch {}, batch {}, Loss {:.4f}, accuracy {:.2f}".format(epoch, iset, validloss.item(), validAccuracy.item()))
+#         logging.info("Epoch {}, batch {}, Loss {:.4f}, accuracy {:.2f}".format(epoch, iset, validloss.item(), validAccuracy.item()))
         
 #     # Save results
 #     if saveResults and resultPath is not None:
