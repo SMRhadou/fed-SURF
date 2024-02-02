@@ -51,9 +51,9 @@ def metrics(model, metadataset, Graph, objective_function, criterion, evaluate=e
             for i in range(len(metadataset)):
                 crossLoss[ibatch, i] = accuracy(outs[model.nLayers], metadataset[i][1][0], metadataset[i][1][1], device)
 
-    logging.debug(r'Accuracy {:.2f} +/- {:.2f}'.format(np.mean(Acc)*100, np.std(Acc)*100))
-    logging.debug(r'Objective {} +/- {}'.format(np.mean(obj), np.std(obj)))
-    logging.debug(r'Variability Per Agent {:.2f} +/- {:.2f}'.format(np.mean(AccPerAgent)*100, np.std(AccPerAgent)*100))
+    logging.info(r'Accuracy {:.2f} +/- {:.2f}'.format(np.mean(Acc)*100, np.std(Acc)*100))
+    logging.info(r'Objective {} +/- {}'.format(np.mean(obj), np.std(obj)))
+    logging.info(r'Variability Per Agent {:.2f} +/- {:.2f}'.format(np.mean(AccPerAgent)*100, np.std(AccPerAgent)*100))
     return testloss, testAccuracy, dist2Opt, AccPerAgent, crossLoss, BOagents
 
 def plotting(loss_constrained, acc, dist2Opt, loss_unconstrained, acc_unconstrained, dist2Opt_unconstrained, title):
@@ -97,14 +97,17 @@ def plotting_decentralizedFigs(acc, acc2, acc3, acc4, args, title):
     sns.set_style('darkgrid')
     plt.figure(figsize=(4,3))
     K = args.K - 1
-    plt.plot(np.arange(0, K*acc.shape[1], K), np.mean(acc[:-1], axis=0)*100, 'b', label='U-DGD')
-    plt.errorbar(np.arange(0, K*acc.shape[1], K), np.mean(acc[:-1], axis=0)*100, yerr=np.std(acc[:-1], axis=0)*100, fmt='b', capsize=3, alpha=0.5)
-    plt.plot(np.arange(acc2.shape[1]), np.mean(acc2, axis=0)*100, 'r', label='DGD')
-    plt.errorbar(np.arange(0, acc2.shape[1], 10), np.mean(acc2[:,::10], axis=0)*100, yerr=np.std(acc2[:,::10], axis=0)*100, fmt='r', capsize=3, alpha=0.5)
-    plt.plot(np.arange(acc3.shape[1]), np.mean(acc3, axis=0)*100, 'k', label='DSGD')
-    # plt.errorbar(np.arange(0, acc3.shape[1], 10), np.mean(acc3[:,::10], axis=0)*100, yerr=np.std(acc3[:,::10], axis=0)*100, fmt='r', capsize=3, alpha=0.5)
+    plt.plot(np.arange(0, K*acc.shape[1], K), np.mean(acc[:-1], axis=0)*100, 'b', linewidth=2, label='U-DGD')
+    # plt.errorbar(np.arange(0, K*acc.shape[1], K), np.mean(acc[:-1], axis=0)*100, yerr=np.std(acc[:-1], axis=0)*100, fmt='b', capsize=3, alpha=0.5)
+    plt.fill_between(np.arange(0, K*acc.shape[1], K), (np.mean(acc[:-1], axis=0)-np.std(acc[:-1], axis=0))*100, (np.mean(acc[:-1], axis=0)+np.std(acc[:-1], axis=0))*100, color='b', alpha=0.2)
+    plt.plot(np.arange(acc2.shape[1]), np.mean(acc2, axis=0)*100, 'r', linewidth=1, label='DGD')
+    # plt.errorbar(np.arange(0, acc2.shape[1], 10), np.mean(acc2[:,::10], axis=0)*100, yerr=np.std(acc2[:,::10], axis=0)*100, fmt='r', capsize=3, alpha=0.5)
+    plt.fill_between(np.arange(0, acc2.shape[1], 10), (np.mean(acc2[:,::10], axis=0)-np.std(acc2[:,::10], axis=0))*100, (np.mean(acc2[:,::10], axis=0)+np.std(acc2[:,::10], axis=0))*100, color='r', alpha=0.2)
+    plt.plot(np.arange(acc3.shape[1]), np.mean(acc3, axis=0)*100, 'k', linewidth=1, label='DSGD')
+    # #plt.errorbar(np.arange(0, acc3.shape[1], 10), np.mean(acc3[:,::10], axis=0)*100, yerr=np.std(acc3[:,::10], axis=0)*100, fmt='r', capsize=3, alpha=0.5)
     plt.plot(np.arange(acc4.shape[1]), np.mean(acc4, axis=0)*100, 'gray', label='DFedAvgM')
-    plt.errorbar(np.arange(0, acc4.shape[1], 10), np.mean(acc4[:,::10], axis=0)*100, yerr=np.std(acc4[:,::10], axis=0)*100, fmt='gray', capsize=3, alpha=0.5)
+    # plt.errorbar(np.arange(0, acc4.shape[1], 10), np.mean(acc4[:,::10], axis=0)*100, yerr=np.std(acc4[:,::10], axis=0)*100, fmt='gray', capsize=3, alpha=0.5)
+    plt.fill_between(np.arange(0, acc4.shape[1], 10), (np.mean(acc4[:,::10], axis=0)-np.std(acc4[:,::10], axis=0))*100, (np.mean(acc4[:,::10], axis=0)+np.std(acc4[:,::10], axis=0))*100, color='gray', alpha=0.2)
     plt.xlabel("Communication rounds")
     plt.ylabel("Accuracy %")
     plt.legend()
