@@ -7,6 +7,12 @@ import argparse
 import torch
 
 import core.utils_unrolling as utils
+plt.set_loglevel (level = 'warning')
+pil_logger = logging.getLogger('PIL')  
+pil_logger.setLevel(logging.INFO)
+FLAGS = argparse.ArgumentParser()
+_, args = utils.parser(FLAGS)
+
 import core.utils_testing as utils_test
 from models.unrolledModels import *
 from models.ResNet import *
@@ -16,17 +22,10 @@ from core.evaluation import *
 from core.training import *
 from core.data import *
 
-
-plt.set_loglevel (level = 'warning')
-pil_logger = logging.getLogger('PIL')  
-pil_logger.setLevel(logging.INFO)
-
 np.random.seed(0)
 torch.manual_seed(0)
-FLAGS = argparse.ArgumentParser()
-_, args = utils.parser(FLAGS)
 
-logfile = f"./logs/logfile_MoreExp.log"
+logfile = f"./logs/logfile_ICML_regularGraph.log"
 logging.basicConfig(filename=logfile, level=logging.DEBUG)
 utils.printing(vars(args))
 
@@ -47,13 +46,17 @@ if args.createMetaDataset:
     with open(f"./data/meta/{args.Dataset}-test-dirichlet-{args.alpha}.pkl", 'wb') as ObjFile:
         pickle.dump(metadataset, ObjFile)
 else:
-    with open(f"./data/meta/{args.Dataset}-test-dirichlet-{args.alpha}.pkl", 'rb') as ObjFile:
+    with open(f"./data/meta/{args.Dataset}-test.pkl", 'rb') as ObjFile:
         metadataset = pickle.load(ObjFile)
 
 # Generate Graphs
-logging.debug("Generating Graphs ...")
-Graph, _ = utils.Generate_KdegreeGraphs(args.nDatasets, args.nAgents, args.nodeDegree)
-# Graph = utils.Generate_randGraphs(args.nDatasets, args.nAgents, 0.1)
+logging.info("Generating Graphs ...")
+if args.GraphType == 'Kdegree':
+    Graph, _ = utils.Generate_KdegreeGraphs(args.nDatasets, args.nAgents, args.nodeDegree)
+    modelPath = "./savedModels/CIFAR10_constrained_final_10_10/"
+elif args.GraphType == 'Random':
+    Graph = utils.Generate_randGraphs(args.nDatasets, args.nAgents, 0.1)
+    modelPath = "./savedModels/CIFAR10_constrained_random_final_10_10/"
 
 criterion = nn.CrossEntropyLoss()
 objective_function = inner_loss
@@ -61,9 +64,8 @@ objective_function = inner_loss
 #%% Evaluation
 
 # Load UDGD model (constrained)
-modelPath = "./savedModels/CIFAR10_constrained_final_10_10/"
 model = UnrolledDGD(args.nLayers, args.K, (featureSizePerClass+args.nClasses)*args.batchSize, (featureSizePerClass+1)*args.nClasses, args.batchSize)
-logging.debug("Evaluation ...")
+logging.info("Evaluation ...")
 checkpoint = torch.load(modelPath+"model_best.pth")
 model.load_state_dict(checkpoint["model_state_dict"])
 
@@ -72,7 +74,7 @@ testloss, testAccuracy, dist2Opt, AccPerAgent, crossLoss, _ = utils_test.metrics
 # Load UDGD model (unconstrained)
 modelPath = "./savedModels/CIFAR10_unconstrained_final_10_10/"
 model_unconstrained = UnrolledDGD(args.nLayers, args.K, (featureSizePerClass+args.nClasses)*args.batchSize, (featureSizePerClass+1)*args.nClasses, args.batchSize)
-logging.debug("Evaluation ...")
+logging.info("Evaluation ...")
 checkpoint = torch.load(modelPath+"model_best.pth")
 model_unconstrained.load_state_dict(checkpoint["model_state_dict"])
 
@@ -83,19 +85,18 @@ utils_test.plotting(testloss, testAccuracy, dist2Opt, testloss_unconstrained, te
 
 
 # Decentralized Benchmarks
-# Graph, _ = utils.Generate_KdegreeGraphs(args.nDatasets, args.nAgents, args.nodeDegree)
 testAccuracy_DGD, testAccuracy_DSGD, testAccuracy_DFedAvg = DGD.metric(metadataset, Graph, inner_loss, criterion=accuracy, nEpochs=200, alpha=100, nAgents=args.nAgents, LLSize=(featureSizePerClass+1)*args.nClasses, device=device)
-utils_test.plotting_decentralizedFigs(testAccuracy, testAccuracy_DGD, testAccuracy_DSGD, testAccuracy_DFedAvg, args, title='decen_performance_0.7')
-with open(f"./data/Accuracy-{args.alpha}.pkl", 'wb') as ObjFile:
+utils_test.plotting_decentralizedFigs(testAccuracy, testAccuracy_DGD, testAccuracy_DSGD, testAccuracy_DFedAvg, args, title=f'decen_ICML_D1_color')
+with open(f"./data/Accuracy-{args.Trial}.pkl", 'wb') as ObjFile:
     pickle.dump((testAccuracy, testAccuracy_DGD, testAccuracy_DSGD, testAccuracy_DFedAvg),ObjFile)
 
 # %% Centralized CNN
-logging.debug("="*60)
-logging.debug("="*60)
-logging.debug('CNN Experiments')
+logging.info("="*60)
+logging.info("="*60)
+logging.info('CNN Experiments')
 centralized_training(metadataset, criterion, args)
-logging.debug("="*60)
-logging.debug("="*60)
+logging.info("="*60)
+logging.info("="*60)
 
 #%% Asynchronous Communications
 pickDataset = 0
@@ -125,8 +126,8 @@ for i in tqdm(np.arange(11)):
     constrainedAsynAcc.append((np.mean(acc_cons), np.std(acc_cons)))
     unconstrainedAsyn.append((np.mean(loss_uncons), np.std(loss_uncons)))
     unconstrainedAsynAcc.append((np.mean(acc_uncons), np.std(acc_uncons)))
-    logging.debug('Trial {} - Constrained: {} +/- {}, Unconstrained: {} +/- {}'.format(i, np.mean(loss_cons), np.std(loss_cons), np.mean(loss_uncons), np.std(loss_uncons)))
-    logging.debug('Trial {} - Constrained: {} +/- {}, Unconstrained: {} +/- {}'.format(i, np.mean(acc_cons), np.std(acc_cons), np.mean(acc_uncons), np.std(acc_uncons)))
+    logging.info('Trial {} - Constrained: {} +/- {}, Unconstrained: {} +/- {}'.format(i, np.mean(loss_cons), np.std(loss_cons), np.mean(loss_uncons), np.std(loss_uncons)))
+    logging.info('Trial {} - Constrained: {} +/- {}, Unconstrained: {} +/- {}'.format(i, np.mean(acc_cons), np.std(acc_cons), np.mean(acc_uncons), np.std(acc_uncons)))
     # Plotting
 utils_test.plotAsyn(constrainedAsyn, unconstrainedAsyn, title='Loss')
 utils_test.plotAsyn(constrainedAsynAcc, unconstrainedAsynAcc, title='Accuracy')
