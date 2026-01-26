@@ -1,7 +1,17 @@
 # fed-SURF
 
-This repository contains the code needed tp reproduce the results of the following paper:
-"Stochastic Unrolled Federate Learning," under review, 2023.
+This repository contains the code needed to reproduce the results of <a href="https://bit.ly/3MBtRfH">Stochastic Unrolled Neural Networks</a>. To cite the paper, please use the bib entry:
+```
+@inproceedings{hadou2024stochastic,
+      title={Stochastic Unrolled Neural Networks}, 
+      author={Samar Hadou, and Navid NaderiAlizadeh and Alejandro Ribeiro},
+      booktitle={Conference on Parsimony and Learning (CPAL)},
+      year={2026},
+      url={https://arxiv.org/abs/2305.15371}, 
+}
+```
+
+----
 
 To run the main experiment in the paper:
 ```
