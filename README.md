@@ -7,7 +7,7 @@ This repository contains the code needed to reproduce the results of <a href="ht
       author={Samar Hadou, and Navid NaderiAlizadeh and Alejandro Ribeiro},
       booktitle={Conference on Parsimony and Learning (CPAL)},
       year={2026},
-      url={https://arxiv.org/abs/2305.15371}, 
+      url={https://openreview.net/pdf?id=hQQMk0IOPv}, 
 }
 ```
 
